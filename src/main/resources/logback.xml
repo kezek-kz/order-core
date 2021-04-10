@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <property name="L_LEVEL" value="${LOG_LEVEL:-DEBUG}" />
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender" target="System.out">
+        <encoder>
+            <pattern>[%-5level] [%date{dd/MM/yyyy HH:mm:ss.SSSZ}] %logger{1} %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="STDOUT" />
+        <neverBlock>true</neverBlock>
+        <queueSize>8192</queueSize>
+    </appender>
+
+    <logger name="akka.cluster.ddata.Replicator" level="INFO" />
+    <logger name="akka.http.impl.engine.client" level="INFO" />
+    <logger name="akka.http.impl.engine.client.PoolGateway" level="WARN" />
+    <logger name="akka.http.impl.engine.client.PoolMasterActor" level="WARN" />
+    <logger name="akka.http.impl.util" level="INFO" />
+    <logger name="akka.io.TcpListener" level="WARN" />
+    <logger name="com.codahale.metrics" level="INFO" />
+    <logger name="com.datastax" level="INFO" />
+    <logger name="com.datastax.oss.driver" level="WARN" />
+    <logger name="com.redis" level="INFO" />
+    <logger name="com.sksamuel.elastic4s" level="INFO" />
+    <logger name="com.zaxxer.hikari" level="INFO" />
+    <logger name="io.grpc.netty" level="INFO" />
+    <logger name="io.netty" level="INFO" />
+    <logger name="io.swagger" level="INFO" />
+    <logger name="org.apache.kafka" level="INFO" />
+    <logger name="org.mongodb" level="INFO" />
+    <logger name="org.mongodb.driver" level="WARN" />
+    <logger name="scala.slick" level="INFO" />
+    <logger name="slick" level="INFO" />
+
+
+    <root level="${L_LEVEL}">
+        <appender-ref ref="ASYNC" />
+    </root>
+
+</configuration>
