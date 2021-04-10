@@ -138,9 +138,11 @@ class OrderService()(implicit val mongoClient: MongoClient,
           log.error(s"create() failed to create order {ex: $ex, order: ${order.asJson.noSpaces}}")
           throw ApiException(StatusCodes.ServiceUnavailable, ex.getMessage)
       }
-    ) yield order).recover { exception =>
-      log.error(s"create() failed to create order {exception: $exception, createOrderDTO: ${createOrderDTO.asJson.noSpaces}}")
-      throw ApiException(StatusCodes.ServiceUnavailable, s"Failed to create order: $exception")
+    ) yield order).recover {
+      case ex: ApiException => throw ex
+      case exception: Exception =>
+        log.error(s"create() failed to create order {exception: $exception, createOrderDTO: ${createOrderDTO.asJson.noSpaces}}")
+        throw ApiException(StatusCodes.ServiceUnavailable, s"Failed to create order: $exception")
     }
   }
 

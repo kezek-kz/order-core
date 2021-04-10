@@ -49,7 +49,7 @@ class OrderMongoRepository()(implicit val mongoClient: MongoClient,
   val collection: MongoCollection[Document] = database.getCollection(config.getString("db.mongo.collection.order"))
   val counterCollection: MongoCollection[Document] = database.getCollection(config.getString("db.mongo.collection.counter"))
 
-  override def incrementCounter(): Future[Unit] = {
+  override def  incrementCounter(): Future[Unit] = {
     counterCollection.updateOne(
       equal("id", "order"),
       combine(
@@ -65,7 +65,7 @@ class OrderMongoRepository()(implicit val mongoClient: MongoClient,
       .find(equal("id", "order"))
       .headOption()
       .map {
-        case Some(document) => parse(document.toJson()).toTry.get.hcursor.get[Long]("counter").toTry.get
+        case Some(document) => parse(document.toJson()).toTry.get.hcursor.get[Long]("count").toTry.get
         case None => 0L
       }
   }

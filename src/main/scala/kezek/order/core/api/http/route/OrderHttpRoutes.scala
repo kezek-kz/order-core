@@ -43,7 +43,7 @@ trait OrderHttpRoutes extends MainCodec {
     description = "Updates order's status and appends state to states",
     method = "PUT",
     parameters = Array(
-      new Parameter(name = "id", in = ParameterIn.PATH, example = "2251799814619115", required = true),
+      new Parameter(name = "id", in = ParameterIn.PATH, example = "", required = true),
     ),
     requestBody = new RequestBody(
       content = Array(
@@ -53,7 +53,7 @@ trait OrderHttpRoutes extends MainCodec {
           examples = Array(
             new ExampleObject(name = "ApprovedDTO", value = "{\n  \"name\": \"ПОДТВЕРЖДЕН\"\n}"),
             new ExampleObject(name = "RejectedDTO", value = "{\n  \"name\": \"ОТКАЗОНО\"\n  \"reason\": \"Some reason\"\n}"),
-            new ExampleObject(name = "PaidDTO", value = "{\n  \"name\": \"ОПЛАЧЕН\"\n  \"paymentDetails\": \"{}\"\n}"),
+            new ExampleObject(name = "PaidDTO", value = "{\n  \"name\": \"ОПЛАЧЕН\",\n  \"paymentDetails\": {}\n}"),
             new ExampleObject(name = "PreparingDTO", value = "{\n  \"name\": \"ГОТОВИТЬСЯ\"\n}"),
             new ExampleObject(name = "CompletedDTO", value = "{\n  \"name\": \"ГОТОВО\"\n}"),
           )
@@ -192,7 +192,7 @@ trait OrderHttpRoutes extends MainCodec {
           schema = new Schema(implementation = classOf[CreateOrderDTO]),
           mediaType = "application/json",
           examples = Array(
-            new ExampleObject(name = "CreateOrderDTO", value = "")
+//            new ExampleObject(name = "CreateOrderDTO", value = "")
           )
         )
       ),

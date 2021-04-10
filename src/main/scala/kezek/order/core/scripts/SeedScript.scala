@@ -30,15 +30,6 @@ object SeedScript {
         log.error(s"createOrderCollectionIndexes() failed to create unique indexes for id{details: $exception}")
     }
 
-    collection.createIndex(
-      ascending("slug"),
-      IndexOptions().unique(true)
-    ).toFuture().onComplete {
-      case Success(_) =>
-        log.debug("createOrderCollectionIndexes() successfully created unique indexes for slug ")
-      case Failure(exception) =>
-        log.error(s"createOrderCollectionIndexes() failed to create unique indexes for slug {details: $exception}")
-    }
   }
 
 
