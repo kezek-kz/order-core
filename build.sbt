@@ -52,5 +52,5 @@ herokuConfigVars in Compile := Map(
   "HOST" -> "0.0.0.0"
 )
 herokuProcessTypes in Compile := Map(
-  "web" -> "target/universal/stage/bin/my-scala-app" // project name
+  "web" -> "target/universal/stage/bin/order-core" // project name
 )
