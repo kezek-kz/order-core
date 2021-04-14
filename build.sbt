@@ -15,7 +15,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
   "com.typesafe.akka" %% "akka-protobuf-v3" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-  //
   "org.mongodb.scala" %% "mongo-scala-driver" % "4.2.0",
   //
   "javax.ws.rs"                  % "javax.ws.rs-api"       % "2.1.1",
@@ -49,3 +48,9 @@ herokuAppName in Compile := Map(
 )(sys.props.getOrElse("env", "dev"))
 
 herokuJdkVersion in Compile := "1.8"
+herokuConfigVars in Compile := Map(
+  "HOST" -> "0.0.0.0"
+)
+herokuProcessTypes in Compile := Map(
+  "web" -> "target/universal/stage/bin/my-scala-app" // project name
+)
