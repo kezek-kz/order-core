@@ -9,12 +9,12 @@ import kezek.order.core.api.http.route.OrderHttpRoutes
 
 import javax.ws.rs.{GET, Path}
 
-@Path("/api/v1")
+@Path("/api")
 trait HttpRoutes
   extends OrderHttpRoutes {
 
   val routes: Route =
-    pathPrefix("api" / "v1") {
+    pathPrefix("api") {
       concat(
         healthcheck,
         orderHttpRoutes
