@@ -25,16 +25,17 @@ jobs:
       - uses: actions/checkout@v1
       - name: Run sbt stage deployHeroku
         env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }},
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }},
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }},
-          MONGO_CONNECTION_STRING: ${{ secrets.MONGO_CONNECTION_STRING }},
-          LOG_LEVEL: DEBUG,
-          MONGO_DATABASE: prod_kezek,
-          MONGO_PRODUCT_COLLECTION: product,
-          MONGO_CATEGORY_COLLECTION: category,
-          HOST: 0.0.0.0,
-          SWAGGER_SCHEMES: https,
-          ENV: prod,
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          MONGO_CONNECTION_STRING: ${{ secrets.MONGO_CONNECTION_STRING }}
+          LOG_LEVEL: DEBUG
+          MONGO_DATABASE: prod_kezek
+          MONGO_PRODUCT_COLLECTION: product
+          MONGO_CATEGORY_COLLECTION: category
+          HOST: 0.0.0.0
+          SWAGGER_SCHEMES: https
+          SWAGGER_HOST: prod-kezek-order-core.herokuapp.com
+          ENV: prod
         run: |
           sbt -Denv=prod stage deployHeroku
