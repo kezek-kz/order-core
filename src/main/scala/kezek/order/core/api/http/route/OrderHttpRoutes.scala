@@ -4,7 +4,9 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+import io.circe.Json
 import io.circe.generic.auto._
+import io.scalaland.chimney.dsl.PatcherOps
 import io.swagger.v3.oas.annotations.enums.ParameterIn
 import io.swagger.v3.oas.annotations.media.{Content, ExampleObject, Schema}
 import io.swagger.v3.oas.annotations.parameters.RequestBody
@@ -13,21 +15,24 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import io.swagger.v3.oas.annotations.{Operation, Parameter}
 import kezek.order.core.codec.MainCodec
 import kezek.order.core.domain.Order
-import kezek.order.core.domain.dto.{CreateOrderDTO, OrderListWithTotalDTO, OrderStateDTO, UpdateOrderDTO}
+import kezek.order.core.domain.dto.{CancelOrderDTO, CreateOrderDTO, OrderListWithTotalDTO, UpdateOrderDTO}
 import kezek.order.core.service.OrderService
 import kezek.order.core.util.{HttpUtil, SortUtil}
 
 import javax.ws.rs._
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 trait OrderHttpRoutes extends MainCodec {
 
   val orderService: OrderService
 
+  implicit val executionContext: ExecutionContext
+
   def orderHttpRoutes: Route = {
     pathPrefix("orders") {
       concat(
-        updateOrderStatus,
+        handleEvent,
         updateOrder,
         getOrderById,
         deleteOrder,
@@ -37,55 +42,50 @@ trait OrderHttpRoutes extends MainCodec {
     }
   }
 
-  @PUT
-  @Operation(
-    summary = "Update order status",
-    description = "Updates order's status and appends state to states",
-    method = "PUT",
-    parameters = Array(
-      new Parameter(name = "id", in = ParameterIn.PATH, example = "", required = true),
-    ),
-    requestBody = new RequestBody(
-      content = Array(
-        new Content(
-          schema = new Schema(implementation = classOf[OrderStateDTO]),
-          mediaType = "application/json",
-          examples = Array(
-            new ExampleObject(name = "ApprovedDTO", value = "{\n  \"name\": \"ПОДТВЕРЖДЕН\"\n}"),
-            new ExampleObject(name = "RejectedDTO", value = "{\n  \"name\": \"ОТКАЗОНО\"\n  \"reason\": \"Some reason\"\n}"),
-            new ExampleObject(name = "PaidDTO", value = "{\n  \"name\": \"ОПЛАЧЕН\",\n  \"paymentDetails\": {}\n}"),
-            new ExampleObject(name = "PreparingDTO", value = "{\n  \"name\": \"ГОТОВИТЬСЯ\"\n}"),
-            new ExampleObject(name = "CompletedDTO", value = "{\n  \"name\": \"ГОТОВО\"\n}"),
-          )
-        ),
-      ),
-      required = true
-    ),
-    responses = Array(
-      new ApiResponse(
-        responseCode = "200",
-        description = "OK",
-        content = Array(
-          new Content(
-            schema = new Schema(implementation = classOf[Order]),
-            examples = Array(new ExampleObject(name = "Order", value = ""))
-          )
+  @POST
+  @Operation(summary = "Handle order event")
+  @RequestBody(
+    required = true,
+    content = Array(
+      new Content(
+        schema = new Schema(implementation = classOf[Json]),
+        mediaType = "application/json",
+        examples = Array(
+          new ExampleObject(name = "Cancel", value = "{\n  \"reason\": \"Some cancel reason\"\n}"),
+          new ExampleObject(name = "Checkout", value = "{ \"some\": \"json\"}"),
+          new ExampleObject(name = "Empty", value = "{}")
         )
-      ),
-      new ApiResponse(responseCode = "500", description = "Internal server error")
+      )
     )
   )
-  @Path("/orders/{id}/status")
+  @Parameter(name = "id", in = ParameterIn.PATH, required = true)
+  @Parameter(
+    name = "event",
+    in = ParameterIn.PATH,
+    description = "Events: checkout, cancel, cook, cooked, taken",
+    required = true
+  )
+  @ApiResponse(responseCode = "200", description = "OK", content = Array(new Content(schema = new Schema(implementation = classOf[Order]))))
+  @ApiResponse(responseCode = "500", description = "Internal server error")
+  @Path("/orders/{id}/{event}")
   @Tag(name = "Orders")
-  def updateOrderStatus: Route = {
-    put {
-      path(LongNumber / "status") { id =>
-        entity(as[OrderStateDTO]) { body =>
-          onComplete(orderService.setState(id, OrderService.transformToOrderState(body))) {
-            case Success(result) => complete(result)
-            case Failure(exception) => HttpUtil.completeThrowable(exception)
+  def handleEvent: Route = {
+    post {
+      path(LongNumber / Segment) { (id, event) =>
+        concat (
+          entity(as[CancelOrderDTO]) { body =>
+            onComplete(orderService.handleEvent(id, event, cancelReason = body.cancelReason)) {
+              case Success(result) => complete(result)
+              case Failure(exception) => HttpUtil.completeThrowable(exception)
+            }
+          },
+          entity(as[Json]) { body =>
+            onComplete(orderService.handleEvent(id, event, paymentDetails = body)) {
+              case Success(result) => complete(result)
+              case Failure(exception) => HttpUtil.completeThrowable(exception)
+            }
           }
-        }
+        )
       }
     }
   }
@@ -98,7 +98,7 @@ trait OrderHttpRoutes extends MainCodec {
     parameters = Array(
       new Parameter(name = "page", in = ParameterIn.QUERY, example = "1"),
       new Parameter(name = "pageSize", in = ParameterIn.QUERY, example = "10"),
-      new Parameter(name = "sort", in = ParameterIn.QUERY, example = "")
+      new Parameter(name = "sort", in = ParameterIn.QUERY, example = "-createdAt")
     ),
     responses = Array(
       new ApiResponse(
@@ -107,8 +107,7 @@ trait OrderHttpRoutes extends MainCodec {
         content = Array(
           new Content(
             schema = new Schema(implementation = classOf[OrderListWithTotalDTO]),
-            mediaType = "application/json",
-            examples = Array(new ExampleObject(name = "OrderListWithTotalDTO", value = ""))
+            mediaType = "application/json"
           )
         )
       ),
@@ -152,7 +151,7 @@ trait OrderHttpRoutes extends MainCodec {
     description = "Returns a full information about order by id",
     method = "GET",
     parameters = Array(
-      new Parameter(name = "id", in = ParameterIn.PATH, example = "", required = true),
+      new Parameter(name = "id", in = ParameterIn.PATH, required = true),
     ),
     responses = Array(
       new ApiResponse(
@@ -160,8 +159,7 @@ trait OrderHttpRoutes extends MainCodec {
         description = "OK",
         content = Array(
           new Content(
-            schema = new Schema(implementation = classOf[Order]),
-            examples = Array(new ExampleObject(name = "Order", value = ""))
+            schema = new Schema(implementation = classOf[Order])
           )
         )
       ),
@@ -191,9 +189,6 @@ trait OrderHttpRoutes extends MainCodec {
         new Content(
           schema = new Schema(implementation = classOf[CreateOrderDTO]),
           mediaType = "application/json",
-          examples = Array(
-//            new ExampleObject(name = "CreateOrderDTO", value = "")
-          )
         )
       ),
       required = true
@@ -204,8 +199,7 @@ trait OrderHttpRoutes extends MainCodec {
         description = "OK",
         content = Array(
           new Content(
-            schema = new Schema(implementation = classOf[Order]),
-            examples = Array(new ExampleObject(name = "Order", value = ""))
+            schema = new Schema(implementation = classOf[Order])
           )
         )
       ),
@@ -233,17 +227,7 @@ trait OrderHttpRoutes extends MainCodec {
     description = "Updates order",
     method = "PUT",
     parameters = Array(
-      new Parameter(name = "id", in = ParameterIn.PATH, example = "", required = true),
-    ),
-    requestBody = new RequestBody(
-      content = Array(
-        new Content(
-          schema = new Schema(implementation = classOf[UpdateOrderDTO]),
-          mediaType = "application/json",
-          examples = Array(new ExampleObject(name = "UpdateOrderDTO", value = ""))
-        )
-      ),
-      required = true
+      new Parameter(name = "id", in = ParameterIn.PATH, required = true),
     ),
     responses = Array(
       new ApiResponse(
@@ -252,20 +236,22 @@ trait OrderHttpRoutes extends MainCodec {
         content = Array(
           new Content(
             schema = new Schema(implementation = classOf[Order]),
-            examples = Array(new ExampleObject(name = "Order", value = ""))
           )
         )
       ),
       new ApiResponse(responseCode = "500", description = "Internal server error")
     )
   )
+  @RequestBody(content = Array(new Content(schema = new Schema(implementation = classOf[UpdateOrderDTO]), mediaType = "application/json")), required = true)
   @Path("/orders/{id}")
   @Tag(name = "Orders")
   def updateOrder: Route = {
     put {
       path(LongNumber) { id =>
         entity(as[UpdateOrderDTO]) { body =>
-          onComplete(orderService.update(id, body)) {
+          onComplete {
+            orderService.getById(id).map(_.using(body).ignoreNoneInPatch.patch).map(orderService.update(id, _))
+          } {
             case Success(result) => complete(result)
             case Failure(exception) => HttpUtil.completeThrowable(exception)
           }
@@ -280,7 +266,7 @@ trait OrderHttpRoutes extends MainCodec {
     description = "Deletes order",
     method = "DELETE",
     parameters = Array(
-      new Parameter(name = "id", in = ParameterIn.PATH, example = "", required = true),
+      new Parameter(name = "id", in = ParameterIn.PATH, required = true),
     ),
     responses = Array(
       new ApiResponse(
