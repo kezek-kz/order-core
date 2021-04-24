@@ -31,8 +31,7 @@ jobs:
           MONGO_CONNECTION_STRING: ${{ secrets.MONGO_CONNECTION_STRING }}
           LOG_LEVEL: DEBUG
           MONGO_DATABASE: dev_kezek
-          MONGO_PRODUCT_COLLECTION: product
-          MONGO_CATEGORY_COLLECTION: category
+          MONGO_ORDER_COLLECTION: order
           HOST: 0.0.0.0
           SWAGGER_SCHEMES: https
           SWAGGER_HOST: dev-kezek-order-core.herokuapp.com
