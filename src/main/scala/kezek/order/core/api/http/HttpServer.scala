@@ -4,6 +4,8 @@ import akka.Done
 import akka.actor.CoordinatedShutdown
 import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.Http
+import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
+import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.{Config, ConfigFactory}
 import kezek.order.core.service.OrderService
 import kezek.order.core.swagger.{SwaggerDocService, SwaggerSite}
@@ -31,7 +33,7 @@ case class HttpServer()(implicit val actorSystem: ActorSystem[_],
         port = config.getInt("http-server.port")
       )
       .bind(
-        concat (routes, swaggerSiteRoute, new SwaggerDocService().routes)
+        cors(CorsSettings(config)) { concat (routes, swaggerSiteRoute, new SwaggerDocService().routes) }
       )
       .onComplete {
         case Success(binding) =>

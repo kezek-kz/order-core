@@ -36,7 +36,9 @@ libraryDependencies ++= Seq(
   "joda-time"         % "joda-time"             % "2.10.5",
   "ch.qos.logback"    % "logback-classic"       % "1.2.3" % Runtime,
   //
-  "io.scalaland" %% "chimney" % "0.6.1"
+  "io.scalaland" %% "chimney" % "0.6.1",
+  //
+  "ch.megard" %% "akka-http-cors" % "1.1.1"
 )
 
 enablePlugins(JavaAppPackaging)
